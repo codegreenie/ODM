@@ -163,5 +163,10 @@ var routes = [
     name: 'history',
     path: '/history/',
     url: './history.html'
+    },
+    {
+    name: 'iospay',
+    path: '/iospay/',
+    url: './iospay.html'
     }
   ]

@@ -12,7 +12,7 @@ var app = new Framework7({
   root: '#app',
   theme: 'auto',
   language: 'en',
-  version : "1.4.3",
+  version : "1.5.0",
   routes: routes,
    panels3d: {
     enabled: true,
@@ -1283,10 +1283,10 @@ runLang();
 
 
 
-    if(!window.localStorage.getItem("version_control") || window.localStorage.getItem("version_control") != "1.4.3"){
+    if(!window.localStorage.getItem("version_control") || window.localStorage.getItem("version_control") != "1.5.0"){
 
 
-      window.localStorage.setItem("version_control", "1.4.3");
+      window.localStorage.setItem("version_control", "1.5.0");
     }
     
 
@@ -3227,6 +3227,8 @@ runLang();
 
 
 
+
+
             app.request.post('https://ourdailymanna.org/xandercage/brexit/odmorg/init_transaction.php', 
                 { 
                   "tnx_buyer" : user_serial,
@@ -3252,10 +3254,34 @@ runLang();
                           theCurrencyISO = "NGN"
                         }
                       var realAmount = splitAmount[1];
-
                       var ref = data[0];
 
+                        var deviceType = app.theme;
+                        if (deviceType === "ios") {
+
+                          // Initiate Payment using page Payment(Apple iOS)
+
+                          //store parameters needed on the iOS page
+                          var iosPayParams = {
+                            "amount_to_pay" : realAmount,
+                            "reference_no" : ref,
+                            "the_currency" : theCurrencyISO
+                          }
+                          iosPayParams = JSON.stringify(iosPayParams);
+                          window.localStorage.setItem("iosPayParams", iosPayParams);
+
+                          mainView.router.navigate("/iospay/");
+                          app.dialog.close();
+
+                        }
+                        else{
+
+                          // Initiate Payment using inApp Browser(Google Android)
                           callToPaystack(buyerMail, realAmount, ref, theCurrencyISO);
+                          
+                        }
+
+                          
                      }
                      else{
 
@@ -3305,6 +3331,90 @@ runLang();
   }
 
 
+});
+
+
+
+
+
+
+
+
+
+
+
+
+$$(document).on('page:init', '.page[data-name="iospay"]', function (e){
+
+      var permanentReg = window.localStorage.getItem("permanentReg");
+      permanentReg = JSON.parse(permanentReg);
+
+      var iosPayParams = window.localStorage.getItem("iosPayParams");
+      iosPayParams = JSON.parse(iosPayParams);
+
+      var userEmail = permanentReg.email;
+
+
+    
+      PaystackPop.setup({
+       key: 'pk_live_c87d75d7e484238c73106cc17a904d604d5a941c',
+       email: userEmail,
+       amount: iosPayParams.amount_to_pay * 100,
+       reference : iosPayParams.reference_no,
+       currency : iosPayParams.the_currency,
+       subaccount : "ACCT_euk0zdfs06byt02",
+       container: 'paystackEmbedContainer',
+       callback: function(response){
+            var returnedRef = response.reference;
+            verifyMyTnx(returnedRef);
+        },
+      });
+
+
+
+
+      function verifyMyTnx(myRef){
+
+      app.request.post('https://ourdailymanna.org/xandercage/brexit/odmorg/paystack_verify_tnx.php', 
+                { 
+                  "reference" : myRef
+
+                }, function (data) {
+
+                    if (data === "Transaction was successful") {
+
+
+                  app.request.post("https://ourdailymanna.org/xandercage/brexit/odmorg/paystack_confirm_pay.php", 
+                      {
+                        "reference" : myRef
+
+                      }, function(data){
+
+                          mainView.router.navigate("/mypurchases/");                  
+                        
+                      },function(){
+
+                        app.dialog.alert("Network Error. Try Again");
+                        mainView.router.navigate("/preview/");
+
+                      });
+                      
+                    }
+                    else{
+
+                      mainView.router.navigate("/preview/");
+                    }
+
+              }, function(){
+                    app.dialog.alert("Network Error. Try Again");
+                    mainView.router.navigate("/preview/");
+              });
+    
+
+        }
+    
+
+    
 });
 
 
